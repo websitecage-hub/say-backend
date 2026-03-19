@@ -223,28 +223,35 @@ app.post('/update-payment', async (req, res) => {
       .select();
       
     if (error) throw error;
+    console.log(`🔍 SEARCHING FOR USER WITH OrderID: ${order_id}`);
     
     // Fallback: If select() didn't return data, fetch it explicitly
     let user = (data && data.length > 0) ? data[0] : null;
     if (!user) {
        console.log("⚠️ WARN: Update returned no direct data. Retrying fetch...");
-       const { data: retryData } = await supabase
+       const { data: retryData, error: fetchError } = await supabase
          .from('buyers')
          .select('*')
          .eq('order_id', order_id)
-         .single();
+         .maybeSingle(); // maybeSingle() won't throw if zero results
+         
+       if (fetchError) console.error("   ❌ FETCH ERROR:", fetchError.message);
        user = retryData;
     }
 
-    console.log(`🎯 DATABASE UPDATED -> Order: ${order_id} marked as SUCCESS`);
+    if (!user) {
+       console.error(`   ❌ CRITICAL: User NOT FOUND for Order: ${order_id}. Email CANNOT be sent.`);
+       // Log all users in the DB for debug (careful with privacy)
+       const { data: allUsers } = await supabase.from('buyers').select('order_id').limit(5);
+       console.log("   Recent OrderIDs in DB:", allUsers.map(u => u.order_id));
+    } else {
+       console.log(`   ✅ DB UPDATED -> Order: ${order_id} (Internal UserID: ${user.id}) marked as SUCCESS`);
 
-    // 📧 Fire Automated Email if user exists
-    if (user) {
-      // Fire Automated Email in background
-      sendEbookEmail(user.email, user.name || "Reader", order_id).catch(err => console.error("Background Email Error:", err));
+       // 📧 Fire Automated Email in background
+       sendEbookEmail(user.email, user.name || "Reader", order_id).catch(err => console.error("Background Email Error:", err));
     }
 
-    res.status(200).json({ success: true });
+    res.status(200).json({ success: true, userFound: !!user });
   } catch (error) {
     console.error("❌ Database Update Error:", error);
     res.status(500).json({ success: false, error: error.message });
