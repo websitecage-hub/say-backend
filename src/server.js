@@ -39,16 +39,7 @@ try {
   console.error("⚠️ WARN: Failed to initialize Supabase:", err.message);
 }
 
-// 2.6 NodeMailer Configuration
-const nodemailer = require('nodemailer');
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
-});
-
+// 2.6 Email Configuration (Google Apps Script Webhook Firewall Bypass)
 const sendEbookEmail = async (toEmail, toName, token) => {
   try {
     const htmlBody = `
@@ -76,23 +67,37 @@ const sendEbookEmail = async (toEmail, toName, token) => {
       </div>
     `;
 
-    console.log(`📡 SMTP: Attempting to send to ${toEmail} using account: ${process.env.EMAIL_USER}`);
+    const scriptUrl = process.env.GOOGLE_SCRIPT_URL;
 
-    const mailOptions = {
-      from: `"Unleash The Beast" <${process.env.EMAIL_USER}>`,
+    if (!scriptUrl) {
+      console.error("❌ CRITICAL: GOOGLE_SCRIPT_URL is missing in environment variables. Webhook cannot be sent.");
+      return;
+    }
+
+    console.log(`📡 WEBHOOK: Attempting to trigger Google Script for ${toEmail}...`);
+
+    const payload = {
       to: toEmail,
       subject: "Your Ebook is Ready",
-      html: htmlBody
+      htmlBody: htmlBody
     };
+
+    const response = await fetch(scriptUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    const result = await response.json();
     
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`📧 EMAIL SENT: Delivered to ${toEmail} | ID: ${info.messageId}`);
-  } catch (err) {
-    console.error(`❌ EMAIL FAILED: Could not send to ${toEmail}`);
-    console.error(`   Error details: ${err.message}`);
-    if (err.code === 'EAUTH') {
-       console.error("   CRITICAL: Authentication failed. Please check your EMAIL_USER and App Password.");
+    if (result.success) {
+      console.log(`📧 EMAIL WEBHOOK SUCCESS: Delivered to ${toEmail}`);
+    } else {
+      console.error(`❌ EMAIL WEBHOOK ERROR:`, result.error);
     }
+  } catch (err) {
+    console.error(`❌ EMAIL WEBHOOK FAILED: Could not trigger script for ${toEmail}`);
+    console.error(`   Error details: ${err.message}`);
   }
 };
 
