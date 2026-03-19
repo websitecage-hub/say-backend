@@ -42,10 +42,15 @@ try {
 // 2.6 NodeMailer Configuration
 const nodemailer = require('nodemailer');
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
+  },
+  tls: {
+    rejectUnauthorized: false
   }
 });
 
@@ -76,16 +81,26 @@ const sendEbookEmail = async (toEmail, toName, token) => {
       </div>
     `;
 
+    console.log(`📡 SMTP: Attempting to send to ${toEmail} using account: ${process.env.EMAIL_USER}`);
+
     const mailOptions = {
       from: `"Unleash The Beast" <${process.env.EMAIL_USER}>`,
       to: toEmail,
       subject: "Your Ebook is Ready",
       html: htmlBody
     };
+    
+    // Verify connection before sending
+    await transporter.verify();
+    
     const info = await transporter.sendMail(mailOptions);
     console.log(`📧 EMAIL SENT: Delivered to ${toEmail} | ID: ${info.messageId}`);
   } catch (err) {
-    console.error(`❌ EMAIL FAILED: Could not send to ${toEmail}`, err.message);
+    console.error(`❌ EMAIL FAILED: Could not send to ${toEmail}`);
+    console.error(`   Error details: ${err.message}`);
+    if (err.code === 'EAUTH') {
+       console.error("   CRITICAL: Authentication failed. Please check your EMAIL_USER and App Password.");
+    }
   }
 };
 
