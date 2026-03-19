@@ -301,6 +301,19 @@ app.post('/verify-payment', (req, res) => {
   }
 });
 
+app.post('/test-email', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).send("Email required");
+    
+    console.log(`🧪 TEST EMAIL: Triggering to ${email}...`);
+    await sendEbookEmail(email, "Test User", "TEST_TOKEN_123");
+    res.status(200).json({ success: true, message: "Test email trigger command sent. Check logs." });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 /**
  * @route   GET /download
  * @desc    Securely serves the ebook after validating the token
