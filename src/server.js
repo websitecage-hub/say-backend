@@ -42,16 +42,10 @@ try {
 // 2.6 NodeMailer Configuration
 const nodemailer = require('nodemailer');
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false, // Use STARTTLS
-  family: 4, // Force IPv4 to avoid Render's IPv6 routing issues (ENETUNREACH)
+  service: 'gmail',
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
-  },
-  tls: {
-    rejectUnauthorized: false
   }
 });
 
@@ -90,9 +84,6 @@ const sendEbookEmail = async (toEmail, toName, token) => {
       subject: "Your Ebook is Ready",
       html: htmlBody
     };
-    
-    // Verify connection before sending
-    await transporter.verify();
     
     const info = await transporter.sendMail(mailOptions);
     console.log(`📧 EMAIL SENT: Delivered to ${toEmail} | ID: ${info.messageId}`);
