@@ -208,11 +208,23 @@ app.post('/update-payment', async (req, res) => {
       .select();
       
     if (error) throw error;
+    
+    // Fallback: If select() didn't return data, fetch it explicitly
+    let user = (data && data.length > 0) ? data[0] : null;
+    if (!user) {
+       console.log("⚠️ WARN: Update returned no direct data. Retrying fetch...");
+       const { data: retryData } = await supabase
+         .from('buyers')
+         .select('*')
+         .eq('order_id', order_id)
+         .single();
+       user = retryData;
+    }
 
     console.log(`🎯 DATABASE UPDATED -> Order: ${order_id} marked as SUCCESS`);
 
     // 📧 Fire Automated Email if user exists
-    if (data && data.length > 0) {
+    if (user) {
       // Fire Automated Email in background
       sendEbookEmail(user.email, user.name || "Reader", order_id).catch(err => console.error("Background Email Error:", err));
     }
