@@ -15,7 +15,7 @@ const app = express();
 app.use(cors({ origin: "*" }));
 app.use(bodyParser.json());
 
-const BACKEND_URL = process.env.BACKEND_URL || "https://say-backend.onrender.com";
+const BACKEND_URL = process.env.BACKEND_URL || "https://say-backend-ux5j.onrender.com";
 
 // 2. Razorpay Instance Configuration
 // CRITICAL: Keep Key Secret in .env only. Never expose in frontend.
