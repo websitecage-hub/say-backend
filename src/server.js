@@ -213,9 +213,8 @@ app.post('/update-payment', async (req, res) => {
 
     // 📧 Fire Automated Email if user exists
     if (data && data.length > 0) {
-      const user = data[0];
-      // Using order_id as the unique download token for now
-      await sendEbookEmail(user.email, user.name || "Reader", order_id);
+      // Fire Automated Email in background
+      sendEbookEmail(user.email, user.name || "Reader", order_id).catch(err => console.error("Background Email Error:", err));
     }
 
     res.status(200).json({ success: true });
